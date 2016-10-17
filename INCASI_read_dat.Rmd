@@ -25,6 +25,9 @@ log <- read.csv(file.path(workdir,'inc1mert.dat'), sep = '\t')
 colnames(log) <- c('block', 'trialnum', 'stimnum', 'oldnew', 'valence', 'dummy1', 'fixonset', 
                    'piconset', 'picoffset', 'clickonset', 'dummy2', 'rateonset', 'dummy3', 'dummy4', 'rightwrong')
 
+log$valence <- factor(log$valence)
+
+
 # read markers of stimulation (using R.matlab package)
 matinfo <- readMat(file.path(workdir,'inc1mert.mat'))
 
@@ -125,6 +128,8 @@ log_encode$rad[ipt] <- (2 * pi * log_encode$frq_Hz[ipt] * log_encode$diff_click_
 
 ```
 
+Plot histogram
+
 ```{r plotenc1}
 
 
@@ -142,7 +147,9 @@ circ.dens = density(H, bw=bw.nrd0(H))
 
 ```
 
-```{r plotenc2, fig.width=5, fig.height=5.5}
+Plot circular density 
+
+```{r plotenc2}
 
 plot(H, stack=TRUE, main = "Clicks relative to cardiac phase")
 lines(circ.dens, col="darkgrey", lwd = 3, xpd=TRUE)
@@ -150,7 +157,17 @@ lines(circ.dens, col="darkgrey", lwd = 3, xpd=TRUE)
 
 # QUESTION (@Sven): how to estimate circular density? --> https://www.r-bloggers.com/circular-or-spherical-data-and-density-estimation/
 
-# circ.dens = density(H,bw=20) # estimate circular density (does that make sense?)
-# lines(circ.dens, col="darkgrey", lwd=3)
+
+
+```
+
+compare delay and heart rate for different valences
+
+```{r valence}
+
+summary(aov(rad ~ valence, data = log_encode))
+summary(aov(frq_Hz ~ valence, data = log_encode))
+
+
 
 ```
