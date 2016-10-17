@@ -10,7 +10,7 @@ require(R.matlab)
 require(circular)
 
 # set working directory
-workdir <- 'D:/INCASI/Labtest/20171007/'
+workdir <- 'C:/Users/michael/Documents/INCASI/20161007_LabtestData'
 #setwd('D:/INCASI/Labtest/20171007') 
 ```
 
@@ -44,10 +44,10 @@ logduration_s <- logoffset_s - logonset_s
 ecg_sf <-  2048 # --> 1 datapoint every 0.4882812 ms (1000/2048)
 
 # import raw data
-ecg <- read.csv(file.path(workdir,'20161007_Testdata_export_EXG.csv'), sep = '\t')
+ecg <- read.csv(file.path(workdir,'Testdaten_EXG1und2.csv'), sep = '\t')
 
 # import markers from ECG file ("events")
-ecg_events <- read.csv(file.path(workdir,'20161007_Testdata_export_events.csv'), sep = '\t')
+ecg_events <- read.csv(file.path(workdir,'Testdaten_EXG1und2_events.csv'), sep = '\t')
 
 # check length between markers
 ecgonset_s <- ecg_events[1,3] / ecg_sf
@@ -82,11 +82,15 @@ print(log$pic_duration)
 # write.csv(exg1_crop, 'EXG1_cropped_4Kubios.csv')
 # write.csv(exg2_crop, 'EXG2_cropped_4Kubios.csv')
 
-exg1_peaks <- read.csv(file.path(workdir,'EXG1_cropped_peaks_from_Kubios.txt'))
-exg2_peaks <- read.csv(file.path(workdir,'EXG2_cropped_peaks_from_Kubios.txt'))
+exg2_peaks_tmp <- readMat(file.path(workdir,'EXG2_cropped_4Kubios_hrv.mat'))
+exg2_peaks <- as.vector(exg2_peaks_tmp$Res[[4]][[2]][[2]]) # read timepoints of R-peaks Kubios output directly into R
 
-exg1_peaks <- as.vector(exg1_peaks[,1])
-exg2_peaks <- as.vector(exg2_peaks[,1])
+
+#exg1_peaks <- read.csv(file.path(workdir,'EXG1_cropped_4Kubios.csv'))
+#exg2_peaks <- read.csv(file.path(workdir,'EXG2_cropped_4Kubios.csv'))
+
+#exg1_peaks <- as.vector(exg1_peaks[,1])
+#exg2_peaks <- as.vector(exg2_peaks[,1])
 
 ```
 
@@ -103,14 +107,14 @@ log_encode <- subset(log, log$block == 1)
 for (ipt in 1:length(log_encode$clickonset_ecgtime_s)) {
   
 
-position <-  max(which(exg1_peaks < log_encode$clickonset_ecgtime_s[ipt])) # what's the time of the peak just before the click
+position <-  max(which(exg2_peaks < log_encode$clickonset_ecgtime_s[ipt])) # what's the time of the peak just before the click
 
-log_encode$diff_click_peak_ms[ipt] <- (log_encode$clickonset_ecgtime_s[ipt] - exg1_peaks[position]) * 1000 
+log_encode$diff_click_peak_ms[ipt] <- (log_encode$clickonset_ecgtime_s[ipt] - exg2_peaks[position]) * 1000 
   
-#  log_encode$clickonset_ecgtime_s[ipt] - exg1_peaks[position]
-#  log_encode$clickonset_ecgtime_s[ipt] - exg1_peaks[position+1]
+#  log_encode$clickonset_ecgtime_s[ipt] - exg2_peaks[position]
+#  log_encode$clickonset_ecgtime_s[ipt] - exg2_peaks[position+1]
   
-log_encode$frq_Hz[ipt] <- 60 / (exg1_peaks[position+1] - exg1_peaks[position])
+log_encode$frq_Hz[ipt] <- 60 / (exg2_peaks[position+1] - exg2_peaks[position])
 
 
 # transform into rad: 2 * pi * frequency * time (in ms)
@@ -119,12 +123,30 @@ log_encode$rad[ipt] <- (2 * pi * log_encode$frq_Hz[ipt] * log_encode$diff_click_
   
 }
 
-hist(log_encode$rad)
+```
+
+```{r plotenc1}
+
+
+
+hist(log_encode$rad, 20, main = "Histogram of clicks relative to cardiac phase", xlab = "cardiac phase (rad)")
 
 # plot in circular plot 
 
-H = circular(log_encode$rad,type="angle",units="radians",rotation="clock")
-plot(H)
+H = circular(log_encode$rad, type="angle", units="radians", rotation="clock", zero=pi/2)
+
+# plot(H)
+
+# circ.dens = density(H+3*pi/2, bw=bw.nrd0(H))
+circ.dens = density(H, bw=bw.nrd0(H))
+
+```
+
+```{r plotenc2, fig.width=5, fig.height=5.5}
+
+plot(H, stack=TRUE, main = "Clicks relative to cardiac phase")
+lines(circ.dens, col="darkgrey", lwd = 3, xpd=TRUE)
+
 
 # QUESTION (@Sven): how to estimate circular density? --> https://www.r-bloggers.com/circular-or-spherical-data-and-density-estimation/
 
